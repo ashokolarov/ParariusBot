@@ -1,36 +1,71 @@
 # ParariusBot
 
-ParariusBot is a Python-based automation tool designed to streamline the housing application process on Pararius, a prominent real estate platform in the Netherlands. By leveraging predefined filters, the bot automatically applies to new property listings that match your specified criteria, saving you time and effort in your housing search.
+Three months ago, I started looking for a new apartment to move into in Amsterdam, and for anyone not familiar with the housing crisis in the Netherlands (I was not 😬), it is not an easy task. There are many rental websites, but due to the massive amount of applicants, if you are not one of the first to apply, your chances of even getting a viewing are minimal. Services that apply automatically exist (RentSlam, etc.), but I found them to be a bit too expensive, and so I set out to develop my own bot to automatically apply to listings for me and send me updates when it does so. And so...
 
-Features
-Automated Applications: Automatically submits applications to new Pararius listings that meet your predefined filters.
-Customizable Filters: Set your preferences to target specific property types, locations, price ranges, and other relevant criteria.
-Real-Time Monitoring: Continuously monitors Pararius for new listings, ensuring timely applications.
-Requirements
-Python: Ensure you have Python 3.x installed on your system.
-Dependencies: Install the required Python packages using the provided requirements.txt file.
-Installation
-Clone the Repository:
-bash
-Copy
-Edit
+ParariusBot is a Python-based automation tool designed to streamline the application process for housing listings on [Pararius](https://www.pararius.com/). By utilizing predefined filters, the bot automatically applies to new listings that match your criteria, saving you time and effort in your housing search.
+
+## Features
+
+- **Automated Applications**: Automatically applies to new listings on Pararius that meet your specified filters.
+- **Customizable Filters**: Define your preferences to ensure the bot targets listings that suit your needs.
+- **Efficient Workflow**: Reduces the manual effort involved in applying to multiple housing listings.
+
+## Requirements
+
+- **Python**: Ensure you have Python 3.11 installed on your system.
+- **Selenium**: The bot uses the Selenium framework for web automation. If you haven't already, set up Selenium by following the instructions [here](https://www.selenium.dev/documentation/).
+
+## Setup
+
+1. **Clone the Repository**:
+```bash 
 git clone https://github.com/ashokolarov/ParariusBot.git
 cd ParariusBot
-Install Dependencies:
-bash
-Copy
-Edit
-pip install -r requirements.txt
-Configuration
-Set Up Filters:
-Edit the config.yaml file to define your application preferences, such as location, property type, and budget.
-Personal Information:
-Ensure your personal details (e.g., name, email, phone number) are correctly entered in the configuration file to facilitate the application process.
-Usage
-Run the bot using the following command:
+```
 
-bash
-Copy
-Edit
+2. **Configure your credentials and search settings in the config.yaml**:
+
+``` 
+bot_settings:
+  email: "" # Pararius email
+  password: "" # Pararius password
+
+locations:
+  default:
+    url: "https://www.pararius.com/huurwoningen"
+    min_price: 800 # Minimum price
+    max_price: 1550 # Maximum price
+    min_area: 45 # Minimum area
+    min_rooms: 2 # Minimum number of rooms
+    message: "Message to send with every application"
+    applied_listings_location: "applied_listings"
+
+  # You can override settings for each location you want search
+  den-haag:
+  rotterdam:
+  Amsterdam:
+```
+
+3. **Usage**:
+Run the bot by executing the main.py script:
+
+```bash
 python main.py
-The bot will start monitoring Pararius for new listings that match your criteria and automatically submit applications on your behalf.
+```
+
+The bot will monitor Pararius for new listings that match your predefined filters and automatically submit applications on your behalf.
+
+4. **Notification**:
+There are currently two options for getting notified when the bot has applied to a location.
+
+  ***Console***
+  By default, the bot prints out every match it finds and when it is finished applying to it in the console, as seen below:
+
+  ![Example console output](images/console.png)
+
+  ***Twilio***
+  You can also set up your Twilio connection by providing you API keys in the config.yaml to receive updates on WhatsApp as seen below:
+  ![Updates received on WhatsApp](images/twilio.png)
+
+## Contributing
+Contributions are welcome! If you have suggestions for improvements or encounter any issues, feel free to open an issue or submit a pull request.
