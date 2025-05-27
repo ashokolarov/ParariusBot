@@ -1,5 +1,6 @@
 import atexit
 import os
+import re
 import time
 from datetime import datetime
 
@@ -191,21 +192,26 @@ class ParariusBot:
             file.write(url + "\n")
 
     @staticmethod
-    def get_listing_prince(listing):
-        price_element = listing.find_element(
-            By.CSS_SELECTOR, ".listing-search-item__price"
-        )  # Selects the price element in each listing
-        price = price_element.text  # Get the text content (e.g., "€ 718 per maand")
-        price = (
-            price.replace("€", "")
-            .replace("per maand", "")
-            .replace(" ", "")
-            .replace(".", "")
-        )  # Remove unwanted characters
+    def get_listing_price(listing):
         try:
-            price = int(price)
-        except:
-            price = 1000
+            price_element = listing.find_element(
+                By.CSS_SELECTOR, ".listing-search-item__price"
+            )  # Selects the price element in each listing
+        except selenium.common.exceptions.NoSuchElementException as e:
+            print('No price found')
+            raise
+        price = price_element.get_attribute('innerHTML')  # Get the text content (e.g., "€ 718 per maand")
+
+        # ^         start of string
+        # [^0-9]*   non-numbers, optional
+        # (         capture group
+        # \d+       one or more digits
+        # (?:       non-capture group
+        # \.\d+     literal dot, followed by one or more digits
+        # ?         optional
+        price = re.match(r'^[^0-9]*(\d+(?:\.\d+)?)', price).group(1)
+        price = price.replace(".", "")  # Remove unwanted characters
+        price = int(price)
         return price
 
     @staticmethod
