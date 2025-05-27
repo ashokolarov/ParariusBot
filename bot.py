@@ -129,10 +129,11 @@ class ParariusBot:
             self.login()
 
         time.sleep(self.time_between_requests)
-        # Locate the text area and enter the message
-        message_field = self.driver.find_element(By.XPATH, "//textarea")
-        message_field.clear()
-        message_field.send_keys(self.location.message)
+        if self.location.message:
+            # Locate the text area and enter the message
+            message_field = self.driver.find_element(By.XPATH, "//textarea")
+            message_field.clear()
+            message_field.send_keys(self.location.message)
 
         time.sleep(self.time_between_requests)
         # Click the "Verstuur" button
