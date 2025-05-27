@@ -40,65 +40,81 @@ class ParariusBot:
 
     def process_listings(self):
         self.driver.get(self.location.url)
-        listings = self.driver.find_elements(By.CSS_SELECTOR, ".search-list__item")
+        self.get_rid_of_cookie_consent()
+        listings = self.driver.find_elements(By.CSS_SELECTOR, ".search-list__item--listing")  # search-list__item includes ads
 
         applied_listings = self.read_applied_listings(
             self.location.applied_listings_file
         )
         for listing in listings:
             try:
-                # Check the price
-                price = self.get_listing_prince(listing)
+                self.process_single_listing(listing, applied_listings)
+            except Exception as e:
+                print(e)
 
-                if price < self.location.min_price or price > self.location.max_price:
-                    continue
+    def process_single_listing(self, listing, applied_listings):
+        # Check the price
+        price = self.get_listing_price(listing)
 
-                if self.location.min_area is not None:
-                    area = self.get_listing_area(listing)
-                    if area < self.location.min_area:
-                        continue
+        if price < self.location.min_price or price > self.location.max_price:
+            return
 
-                if self.location.min_rooms is not None:
-                    rooms = self.get_listing_rooms(listing)
-                    if rooms < self.location.min_rooms:
-                        continue
+        if self.location.min_area is not None:
+            area = self.get_listing_area(listing)
+            if area < self.location.min_area:
+                return
 
-                # Open the listing link
-                listing_link = listing.find_element(
-                    By.CSS_SELECTOR, "a"
-                )  # Selects the anchor link in each listing
-                listing_url = listing_link.get_attribute("href")
+        if self.location.min_rooms is not None:
+            rooms = self.get_listing_rooms(listing)
+            if rooms < self.location.min_rooms:
+                return
 
-                # Check if already applied
-                if listing_url in applied_listings:
-                    continue
+        # Open the listing link
+        listing_link = listing.find_element(
+            By.CSS_SELECTOR, "a"
+        )  # Selects the anchor link in each listing
+        listing_url = listing_link.get_attribute("href")
 
-                current_time = datetime.now().strftime("%H:%M:%S")
-                print(
-                    f"Found new listing {listing_url} with price {price} in {self.location.name} at {current_time}"
-                )
+        # Check if already applied
+        if listing_url in applied_listings:
+            return
 
-                # Open the listing in a new tab to avoid losing the listings page
-                self.driver.execute_script(f"window.open('{listing_url}', '_blank');")
-                # Switch to the new tab and apply
-                self.driver.switch_to.window(self.driver.window_handles[1])
-                self.apply()
+        current_time = datetime.now().strftime("%H:%M:%S")
+        print(
+            f"Found new listing {listing_url} with price {price} in {self.location.name} at {current_time}"
+        )
 
-                current_time = datetime.now().strftime("%H:%M:%S")
-                print(f"Applied at {current_time}")
-                if not self.debug:
-                    self.twilio_client.send_notification(
-                        listing_url, price, self.location.name
-                    )
+        # Open the listing in a new tab to avoid losing the listings page
+        self.driver.execute_script(f"window.open('{listing_url}', '_blank');")
+        # Switch to the new tab and apply
+        self.driver.switch_to.window(self.driver.window_handles[1])
+        self.apply()
 
-                # Mark the listing as applied
-                self.write_applied_listing(
-                    listing_url, self.location.applied_listings_file
-                )
+        current_time = datetime.now().strftime("%H:%M:%S")
+        print(f"Applied at {current_time}")
+        if not self.debug:
+            self.twilio_client.send_notification(
+                listing_url, price, self.location.name
+            )
 
-                self.driver.switch_to.window(self.driver.window_handles[0])
-            except selenium.common.exceptions.NoSuchElementException:
-                pass
+        # Mark the listing as applied
+        self.write_applied_listing(
+            listing_url, self.location.applied_listings_file
+        )
+
+        self.driver.switch_to.window(self.driver.window_handles[0])
+
+    def get_rid_of_cookie_consent(self):
+        try:
+            reject_cookies = self.driver.find_element(By.ID, 'onetrust-reject-all-handler')
+        except selenium.common.exceptions.NoSuchElementException as e:
+            # Button not found, no problem here
+            pass
+        else:
+            WebDriverWait(self.driver, 10).until(
+                EC.element_to_be_clickable(reject_cookies)
+            )
+            reject_cookies.click()
 
     def apply(self):
         # Open the listing in the same tab
@@ -130,7 +146,7 @@ class ParariusBot:
     def login(self):
         # Login via email by clicking the "Ga verder met Email" button
         email_button = WebDriverWait(self.driver, 10).until(
-            EC.element_to_be_clickable((By.LINK_TEXT, "Ga verder met Email"))
+            EC.element_to_be_clickable((By.CLASS_NAME, "account-access-options__button--email"))
         )
         email_button.click()
 
