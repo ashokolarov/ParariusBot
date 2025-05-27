@@ -16,6 +16,7 @@ class ParariusBot:
         self.password = config["password"]
         self.debug = config["debug"]
         self.time_between_requests = config["time_between_requests"]
+        self.time_between_runs = config.get("time_between_runs", 0)
 
         self.location = location
         self.twilio_client = twilio_client
@@ -31,7 +32,7 @@ class ParariusBot:
         counter = 0
         while True:
             self.process_listings()
-            time.sleep(self.time_between_requests)
+            time.sleep(self.time_between_runs)
 
             counter += 1
             if counter % 25 == 0:
