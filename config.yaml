@@ -20,13 +20,13 @@ locations:
   amsterdam:
     max_price: 1750
 
-twilio:
-  account_sid: ""
-  auth_token: ""
-  sender: ""
-  receivers: 
-    User:
-      phone_number: ""
-      message: "Applied to {url} with price {price} in {location}"
-     
-
+#twilio:
+#  account_sid: ""
+#  auth_token: ""
+#  sender: ""
+#  receivers:
+#    User:
+#      phone_number: ""
+#      message: "Applied to {url} with price {price} in {location}"
+#
+#
