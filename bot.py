@@ -41,8 +41,11 @@ class ParariusBot:
 
     def process_listings(self):
         self.driver.get(self.location.url)
+        time.sleep(self.time_between_requests)
+
         self.get_rid_of_cookie_consent()
         listings = self.driver.find_elements(By.CSS_SELECTOR, ".search-list__item--listing")  # search-list__item includes ads
+        print('Found ' + str(len(listings)) + ' listings in ' + self.location.name)
 
         applied_listings = self.read_applied_listings(
             self.location.applied_listings_file
@@ -211,7 +214,11 @@ class ParariusBot:
         # ?         optional
         price = re.match(r'^[^0-9]*(\d+(?:\.\d+)?)', price).group(1)
         price = price.replace(".", "")  # Remove unwanted characters
-        price = int(price)
+        try:
+            price = int(price)
+        except Exception as e:
+            print(e)
+            raise
         return price
 
     @staticmethod
@@ -219,9 +226,13 @@ class ParariusBot:
         area_element = listing.find_element(
             By.CSS_SELECTOR, ".illustrated-features__item--surface-area"
         )
-        area = area_element.text
-        area = area.replace("m²", "").replace(" ", "")
-        area = int(area)
+        element_text = area_element.text
+        area_str = element_text.replace("m²", "").replace(" ", "")
+        try:
+            area = int(area_str)
+        except Exception as e:
+            print(e)
+            raise
 
         return area
 
