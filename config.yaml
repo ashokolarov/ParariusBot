@@ -3,6 +3,7 @@ bot_settings:
   password: ""
   debug: False
   time_between_requests: 0.25
+  time_between_runs: 5
 
 locations:
   default:
@@ -19,13 +20,13 @@ locations:
   amsterdam:
     max_price: 1750
 
-twilio:
-  account_sid: ""
-  auth_token: ""
-  sender: ""
-  receivers: 
-    User:
-      phone_number: ""
-      message: "Applied to {url} with price {price} in {location}"
-     
-
+#twilio:
+#  account_sid: ""
+#  auth_token: ""
+#  sender: ""
+#  receivers:
+#    User:
+#      phone_number: ""
+#      message: "Applied to {url} with price {price} in {location}"
+#
+#

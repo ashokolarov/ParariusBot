@@ -1,5 +1,6 @@
 import atexit
 import os
+import re
 import time
 from datetime import datetime
 
@@ -16,6 +17,7 @@ class ParariusBot:
         self.password = config["password"]
         self.debug = config["debug"]
         self.time_between_requests = config["time_between_requests"]
+        self.time_between_runs = config.get("time_between_runs", 0)
 
         self.location = location
         self.twilio_client = twilio_client
@@ -31,7 +33,7 @@ class ParariusBot:
         counter = 0
         while True:
             self.process_listings()
-            time.sleep(self.time_between_requests)
+            time.sleep(self.time_between_runs)
 
             counter += 1
             if counter % 25 == 0:
@@ -39,65 +41,84 @@ class ParariusBot:
 
     def process_listings(self):
         self.driver.get(self.location.url)
-        listings = self.driver.find_elements(By.CSS_SELECTOR, ".search-list__item")
+        time.sleep(self.time_between_requests)
+
+        self.get_rid_of_cookie_consent()
+        listings = self.driver.find_elements(By.CSS_SELECTOR, ".search-list__item--listing")  # search-list__item includes ads
+        print('Found ' + str(len(listings)) + ' listings in ' + self.location.name)
 
         applied_listings = self.read_applied_listings(
             self.location.applied_listings_file
         )
         for listing in listings:
             try:
-                # Check the price
-                price = self.get_listing_prince(listing)
+                self.process_single_listing(listing, applied_listings)
+            except Exception as e:
+                print(e)
 
-                if price < self.location.min_price or price > self.location.max_price:
-                    continue
+    def process_single_listing(self, listing, applied_listings):
+        # Check the price
+        price = self.get_listing_price(listing)
 
-                if self.location.min_area is not None:
-                    area = self.get_listing_area(listing)
-                    if area < self.location.min_area:
-                        continue
+        if price < self.location.min_price or price > self.location.max_price:
+            return
 
-                if self.location.min_rooms is not None:
-                    rooms = self.get_listing_rooms(listing)
-                    if rooms < self.location.min_rooms:
-                        continue
+        if self.location.min_area is not None:
+            area = self.get_listing_area(listing)
+            if area < self.location.min_area:
+                return
 
-                # Open the listing link
-                listing_link = listing.find_element(
-                    By.CSS_SELECTOR, "a"
-                )  # Selects the anchor link in each listing
-                listing_url = listing_link.get_attribute("href")
+        if self.location.min_rooms is not None:
+            rooms = self.get_listing_rooms(listing)
+            if rooms < self.location.min_rooms:
+                return
 
-                # Check if already applied
-                if listing_url in applied_listings:
-                    continue
+        # Open the listing link
+        listing_link = listing.find_element(
+            By.CSS_SELECTOR, "a"
+        )  # Selects the anchor link in each listing
+        listing_url = listing_link.get_attribute("href")
 
-                current_time = datetime.now().strftime("%H:%M:%S")
-                print(
-                    f"Found new listing {listing_url} with price {price} in {self.location.name} at {current_time}"
-                )
+        # Check if already applied
+        if listing_url in applied_listings:
+            return
 
-                # Open the listing in a new tab to avoid losing the listings page
-                self.driver.execute_script(f"window.open('{listing_url}', '_blank');")
-                # Switch to the new tab and apply
-                self.driver.switch_to.window(self.driver.window_handles[1])
-                self.apply()
+        current_time = datetime.now().strftime("%H:%M:%S")
+        print(
+            f"Found new listing {listing_url} with price {price} in {self.location.name} at {current_time}"
+        )
 
-                current_time = datetime.now().strftime("%H:%M:%S")
-                print(f"Applied at {current_time}")
-                if not self.debug:
-                    self.twilio_client.send_notification(
-                        listing_url, price, self.location.name
-                    )
+        # Open the listing in a new tab to avoid losing the listings page
+        self.driver.execute_script(f"window.open('{listing_url}', '_blank');")
+        # Switch to the new tab and apply
+        self.driver.switch_to.window(self.driver.window_handles[1])
+        self.apply()
 
-                # Mark the listing as applied
-                self.write_applied_listing(
-                    listing_url, self.location.applied_listings_file
-                )
+        current_time = datetime.now().strftime("%H:%M:%S")
+        print(f"Applied at {current_time}")
+        if not self.debug:
+            self.twilio_client.send_notification(
+                listing_url, price, self.location.name
+            )
 
-                self.driver.switch_to.window(self.driver.window_handles[0])
-            except selenium.common.exceptions.NoSuchElementException:
-                pass
+        # Mark the listing as applied
+        self.write_applied_listing(
+            listing_url, self.location.applied_listings_file
+        )
+
+        self.driver.switch_to.window(self.driver.window_handles[0])
+
+    def get_rid_of_cookie_consent(self):
+        try:
+            reject_cookies = self.driver.find_element(By.ID, 'onetrust-reject-all-handler')
+        except selenium.common.exceptions.NoSuchElementException as e:
+            # Button not found, no problem here
+            pass
+        else:
+            WebDriverWait(self.driver, 10).until(
+                EC.element_to_be_clickable(reject_cookies)
+            )
+            reject_cookies.click()
 
     def apply(self):
         # Open the listing in the same tab
@@ -112,10 +133,11 @@ class ParariusBot:
             self.login()
 
         time.sleep(self.time_between_requests)
-        # Locate the text area and enter the message
-        message_field = self.driver.find_element(By.XPATH, "//textarea")
-        message_field.clear()
-        message_field.send_keys(self.location.message)
+        if self.location.message:
+            # Locate the text area and enter the message
+            message_field = self.driver.find_element(By.XPATH, "//textarea")
+            message_field.clear()
+            message_field.send_keys(self.location.message)
 
         time.sleep(self.time_between_requests)
         # Click the "Verstuur" button
@@ -129,7 +151,7 @@ class ParariusBot:
     def login(self):
         # Login via email by clicking the "Ga verder met Email" button
         email_button = WebDriverWait(self.driver, 10).until(
-            EC.element_to_be_clickable((By.LINK_TEXT, "Ga verder met Email"))
+            EC.element_to_be_clickable((By.CLASS_NAME, "account-access-options__button--email"))
         )
         email_button.click()
 
@@ -173,21 +195,30 @@ class ParariusBot:
             file.write(url + "\n")
 
     @staticmethod
-    def get_listing_prince(listing):
-        price_element = listing.find_element(
-            By.CSS_SELECTOR, ".listing-search-item__price"
-        )  # Selects the price element in each listing
-        price = price_element.text  # Get the text content (e.g., "€ 718 per maand")
-        price = (
-            price.replace("€", "")
-            .replace("per maand", "")
-            .replace(" ", "")
-            .replace(".", "")
-        )  # Remove unwanted characters
+    def get_listing_price(listing):
+        try:
+            price_element = listing.find_element(
+                By.CSS_SELECTOR, ".listing-search-item__price"
+            )  # Selects the price element in each listing
+        except selenium.common.exceptions.NoSuchElementException as e:
+            print('No price found')
+            raise
+        price = price_element.get_attribute('innerHTML')  # Get the text content (e.g., "€ 718 per maand")
+
+        # ^         start of string
+        # [^0-9]*   non-numbers, optional
+        # (         capture group
+        # \d+       one or more digits
+        # (?:       non-capture group
+        # \.\d+     literal dot, followed by one or more digits
+        # ?         optional
+        price = re.match(r'^[^0-9]*(\d+(?:\.\d+)?)', price).group(1)
+        price = price.replace(".", "")  # Remove unwanted characters
         try:
             price = int(price)
-        except:
-            price = 1000
+        except Exception as e:
+            print(e)
+            raise
         return price
 
     @staticmethod
@@ -195,9 +226,13 @@ class ParariusBot:
         area_element = listing.find_element(
             By.CSS_SELECTOR, ".illustrated-features__item--surface-area"
         )
-        area = area_element.text
-        area = area.replace("m²", "").replace(" ", "")
-        area = int(area)
+        element_text = area_element.text
+        area_str = element_text.replace("m²", "").replace(" ", "")
+        try:
+            area = int(area_str)
+        except Exception as e:
+            print(e)
+            raise
 
         return area
 

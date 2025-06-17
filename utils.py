@@ -2,7 +2,6 @@ from copy import deepcopy
 from abc import ABC, abstractmethod
 
 import yaml
-from twilio.rest import Client
 
 
 class NotificationClient(ABC):
@@ -11,6 +10,7 @@ class NotificationClient(ABC):
     def send_notification(self, url, price, location):
         pass
 
+
 class PrintClient(NotificationClient):
     def send_notification(self, url, price, location):
         print(f"URL: {url}\nPrice: {price}\nLocation: {location}\n")
@@ -18,6 +18,7 @@ class PrintClient(NotificationClient):
 
 class TwilioClient(NotificationClient):
     def __init__(self, config):
+        from twilio.rest import Client
         self.client = Client(config["account_sid"], config["auth_token"])
         self.sender = config["sender"]
         self.receivers = config["receivers"]
