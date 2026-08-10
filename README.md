@@ -23,12 +23,35 @@ git clone https://github.com/ashokolarov/ParariusBot.git
 cd ParariusBot
 ```
 
-2. **Configure your credentials and search settings in the config.yaml**:
+2. **Put your credentials in a `.env` file**:
+
+Secrets are kept out of `config.yaml` so they are never committed. Copy the example file and fill it in:
+
+```bash
+cp .env.example .env
+```
+
+```
+PARARIUS_EMAIL=your-pararius-email@example.com
+PARARIUS_PASSWORD=your-pararius-password
+
+# Only needed if you use Twilio notifications
+TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+TWILIO_AUTH_TOKEN=your-twilio-auth-token
+```
+
+`.env` is gitignored. Any `${VAR}` in `config.yaml` is replaced with that environment variable at startup, and the bot exits with a clear error if one is missing. Real environment variables take precedence over `.env`, so you can override a value for a single run:
+
+```bash
+PARARIUS_EMAIL=other@example.com python main.py
+```
+
+3. **Configure your search settings in the config.yaml**:
 
 ``` 
 bot_settings:
-  email: "" # Pararius email
-  password: "" # Pararius password
+  email: "${PARARIUS_EMAIL}" # read from .env
+  password: "${PARARIUS_PASSWORD}" # read from .env
 
 locations:
   default:
@@ -46,7 +69,7 @@ locations:
   Amsterdam:
 ```
 
-3. **Usage**:
+4. **Usage**:
 Run the bot by executing the main.py script:
 
 ```bash
@@ -55,7 +78,7 @@ python main.py
 
 The bot will monitor Pararius for new listings that match your predefined filters and automatically submit applications on your behalf.
 
-4. **Notification**:
+5. **Notification**:
 There are currently two options for getting notified when the bot has applied to a location.
 
   ***Console***

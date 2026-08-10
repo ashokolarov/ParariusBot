@@ -24,9 +24,21 @@ class ParariusBot:
 
         options = webdriver.ChromeOptions()
         if not self.debug:
-            options.add_argument("--headless")
+            options.add_argument("--headless=new")
+            options.add_argument("--window-size=1920,1080")
 
         self.driver = webdriver.Chrome(options=options)
+        if not self.debug:
+            # Headless Chrome reports itself as "HeadlessChrome" in the user
+            # agent, which Cloudflare blocks with a "Just a moment..." page, so
+            # no listings are ever found. Reuse the real user agent with that
+            # token removed instead of hardcoding a version that goes stale.
+            user_agent = self.driver.execute_script(
+                "return navigator.userAgent"
+            ).replace("HeadlessChrome", "Chrome")
+            self.driver.execute_cdp_cmd(
+                "Network.setUserAgentOverride", {"userAgent": user_agent}
+            )
         atexit.register(self.cleanup)
 
     def run(self):

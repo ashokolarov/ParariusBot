@@ -1,7 +1,11 @@
+import os
+import re
 from copy import deepcopy
 from abc import ABC, abstractmethod
 
 import yaml
+
+ENV_VAR_PATTERN = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
 
 
 class NotificationClient(ABC):
@@ -66,10 +70,46 @@ def generate_locations(config):
     return locations
 
 
+def load_dotenv(dotenv_file=".env"):
+    # Read KEY=value pairs from .env into the environment. Variables already
+    # set in the real environment win, so you can override .env per run.
+    if not os.path.exists(dotenv_file):
+        return
+    with open(dotenv_file, "r") as file:
+        for line in file:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            os.environ.setdefault(key.strip(), value.strip().strip("\"'"))
+
+
+def expand_env_vars(config):
+    # Replace every ${VAR} in the config with the environment variable's value.
+    if isinstance(config, dict):
+        return {key: expand_env_vars(value) for key, value in config.items()}
+    if isinstance(config, list):
+        return [expand_env_vars(value) for value in config]
+    if isinstance(config, str):
+        return ENV_VAR_PATTERN.sub(lookup_env_var, config)
+    return config
+
+
+def lookup_env_var(match):
+    name = match.group(1)
+    if name not in os.environ:
+        raise KeyError(
+            f"config.yaml references ${{{name}}}, but that environment "
+            f"variable is not set. Set it in your shell or add it to .env"
+        )
+    return os.environ[name]
+
+
 def parse_config(config_file):
+    load_dotenv()
     with open(config_file, "r") as file:
         config = yaml.safe_load(file)
-    return config
+    return expand_env_vars(config)
 
 
 if __name__ == "__main__":

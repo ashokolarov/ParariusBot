@@ -1,6 +1,6 @@
 bot_settings:
-  email: ""
-  password: ""
+  email: "${PARARIUS_EMAIL}"
+  password: "${PARARIUS_PASSWORD}"
   debug: False
   time_between_requests: 0.25
   time_between_runs: 5
@@ -10,23 +10,31 @@ locations:
     url: "https://www.pararius.com/huurwoningen"
     min_price: 800
     max_price: 1500
-    min_area: 45
-    message: ""
-    applied_listings_location: "applied_listings"
-  delft:
-  den-haag:
-  rotterdam:
-  leiden:
-  amsterdam:
-    max_price: 1750
+    message: "Hi!
+      My name is Lorenzo Onorato, I'm 25 and originally from Italy.
+      I recently graduated with a Master's in Aerospace Engineering from TU Delft, and I'm about to start a new position as a Data Analyst in Huismann.
+      I consideer myself to be a reliable, tidy tenant and now I am looking for a stable place to settle into this next chapter. 
+      Outside of work,  mostlyI enjoy cooking, staying active, and spending time with friends.
 
-#twilio:
-#  account_sid: ""
-#  auth_token: ""
-#  sender: ""
-#  receivers:
-#    User:
-#      phone_number: ""
-#      message: "Applied to {url} with price {price} in {location}"
-#
-#
+      I'd love the opportunity to view the property and would be happy to provide references or any additional documents you might need.
+      Looking forward to hearing from you!
+      
+      Best regards,   
+      Lorenzo Onorato"
+    applied_listings_location: "applied_listings"
+  # schiedam:
+  rotterdam:
+
+twilio:
+  account_sid: "${TWILIO_ACCOUNT_SID}"
+  auth_token: "${TWILIO_AUTH_TOKEN}"
+  sender: ""
+  receivers:
+    # User:
+    #   phone_number: "+393311225815"
+    #   message: "Applied to {url} with price {price} in {location}"
+    Alex:
+      phone_number: "+31657882730"
+      message: "Applied to {url} with price {price} in {location}"
+
+
