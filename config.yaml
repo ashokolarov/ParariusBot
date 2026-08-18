@@ -1,9 +1,11 @@
 bot_settings:
   email: "${PARARIUS_EMAIL}"
   password: "${PARARIUS_PASSWORD}"
-  debug: False
-  time_between_requests: 0.25
-  time_between_runs: 5
+  debug: False # True = dry run: find matches but never submit or notify
+  headless: True # False = show the browser window (independent of debug)
+  chrome_profile_dir: ".chrome-profile" # keeps cookies between runs; "" to disable
+  time_between_requests: 2
+  time_between_runs: 15
 
 locations:
   default:
@@ -25,16 +27,17 @@ locations:
   # schiedam:
   rotterdam:
 
-twilio:
-  account_sid: "${TWILIO_ACCOUNT_SID}"
-  auth_token: "${TWILIO_AUTH_TOKEN}"
-  sender: ""
+# Remove this whole section to fall back to console-only notifications.
+telegram:
+  bot_token: "${TELEGRAM_BOT_TOKEN}" # from @BotFather, read from .env
   receivers:
     # User:
-    #   phone_number: "+393311225815"
+    #   chat_id: "123456789"
     #   message: "Applied to {url} with price {price} in {location}"
     Alex:
-      phone_number: "+31657882730"
+      # Your own chat id: message the bot once, then run
+      # `python telegram_setup.py` to print it.
+      chat_id: "${TELEGRAM_CHAT_ID}"
       message: "Applied to {url} with price {price} in {location}"
 
 

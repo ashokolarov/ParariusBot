@@ -1,15 +1,15 @@
 import concurrent.futures
 
 from bot import ParariusBot
-from utils import TwilioClient, PrintClient, generate_locations, parse_config
+from utils import TelegramClient, PrintClient, generate_locations, parse_config
 
 
 def main():
     config_file = "config.yaml"
     config = parse_config(config_file)
 
-    if config.get("twilio") is not None:
-        client = TwilioClient(config["twilio"])
+    if config.get("telegram") is not None:
+        client = TelegramClient(config["telegram"])
     else:
         client = PrintClient()
 

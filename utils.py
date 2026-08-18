@@ -20,20 +20,50 @@ class PrintClient(NotificationClient):
         print(f"URL: {url}\nPrice: {price}\nLocation: {location}\n")
 
 
-class TwilioClient(NotificationClient):
+class TelegramClient(NotificationClient):
+    API_URL = "https://api.telegram.org/bot{token}/{method}"
+
     def __init__(self, config):
-        from twilio.rest import Client
-        self.client = Client(config["account_sid"], config["auth_token"])
-        self.sender = config["sender"]
+        self.token = config["bot_token"]
         self.receivers = config["receivers"]
+        # Empty values expand fine, so catch them here rather than letting the
+        # first application fail on a 401 hours into a run.
+        if not self.token:
+            raise ValueError("TELEGRAM_BOT_TOKEN is empty; get one from @BotFather")
+        for name, receiver in self.receivers.items():
+            if not receiver.get("chat_id"):
+                raise ValueError(
+                    f"Telegram receiver '{name}' has no chat_id; run "
+                    f"`python telegram_setup.py` to find it"
+                )
+        # Telegram's API is a plain HTTPS call, so there is no SDK to install.
+        import requests
+
+        self.requests = requests
 
     def send_notification(self, url, price, location):
         for receiver in self.receivers.values():
-            body = receiver["message"].format(url=url, price=price, location=location)
-            receiver_number = receiver["phone_number"]
-            self.client.messages.create(
-                from_=self.sender, body=body, to=receiver_number
+            text = receiver["message"].format(url=url, price=price, location=location)
+            self.call(
+                "sendMessage",
+                {"chat_id": str(receiver["chat_id"]), "text": text},
             )
+
+    def call(self, method, payload):
+        response = self.requests.post(
+            self.API_URL.format(token=self.token, method=method),
+            json=payload,
+            timeout=10,
+        )
+        body = response.json()
+        if not body.get("ok"):
+            # Telegram answers 4xx with a readable reason ("chat not found",
+            # "Unauthorized"), which is far more useful than the status code.
+            raise RuntimeError(
+                f"Telegram {method} failed: "
+                f"{body.get('description', response.text)}"
+            )
+        return body["result"]
 
 
 class Location:
@@ -117,6 +147,5 @@ if __name__ == "__main__":
     config = parse_config(config_file)
 
     locations = generate_locations(config["locations"])
-    twilio_client = TwilioClient(config["twilio"])
 
     print(locations)
